@@ -7,12 +7,13 @@ using System.Data.Odbc;
 using System.Data.OracleClient;
 using System.Data.SqlClient;
 using System.Data.SQLite;
+using System.Data.SqlServerCe;
 using System.Linq;
 using System.Text;
 
 namespace DatabasePool
 {
-    static class ConnectionType
+    public static class ConnectionType
     {
         public const string MYSQL = "Mysql";
         public const string SQL = "SQL Server";
@@ -267,10 +268,9 @@ namespace DatabasePool
 
         public void Create(ConnectionInfo con, string name = "")
         {
-            DbConnection _con = null;
+            DbConnection _con = new DbConnection();
             if (con.ServerType == ConnectionType.MYSQL)
             {
-                //παρε τις μη κενες τιμές του ConnectionInfo και βάλ' τες με βαση τις παραμτερους για Mysql 
                 con.ServerMapping = "Server";
                 con.DatabaseMapping = "Database";
                 con.UsernameMapping = "Uid";
@@ -280,7 +280,6 @@ namespace DatabasePool
             }
             else if (con.ServerType == ConnectionType.SQL)
             {
-                //παρε τις μη κενες τιμές του ConnectionInfo και βάλ' τες με βαση τις παραμτερους για SQL 
                 con.ServerMapping = "Server";
                 con.DatabaseMapping = "Database";
                 con.UsernameMapping = "User Id";
@@ -294,11 +293,10 @@ namespace DatabasePool
                 con.PasswordMapping = "Password";
                 con.Custom = "Encrypt Database = True;";
 
-                //_con.Connection = new SqlCeConnection();
+                _con.Connection = new SqlCeConnection(con.ToString());
             }
             else if (con.ServerType == ConnectionType.ORACLE)
             {
-                //παρε τις μη κενες τιμές του ConnectionInfo και βάλ' τες με βαση τις παραμτερους για Oracle 
                 con.ServerMapping = "Server";
                 con.DatabaseMapping = "Data Source";
                 con.UsernameMapping = "User Id";
@@ -317,7 +315,6 @@ namespace DatabasePool
             }
             else if (con.ServerType == ConnectionType.ODBC)
             {
-                //παρε τις μη κενες τιμές του ConnectionInfo και βάλ' τες με βαση τις παραμτερους για Odbc 
                 con.ServerMapping = "Dsn";
                 con.UsernameMapping = "Uid";
                 con.PasswordMapping = "Pwd";
@@ -339,7 +336,7 @@ namespace DatabasePool
                 _con.Open();
             }
             //remove connection
-            Container.Remove(con.Name);
+            Container.Remove("Test");
         }
 
     }
