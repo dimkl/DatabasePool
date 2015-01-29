@@ -20,7 +20,14 @@ namespace Test
                     Server = "127.0.0.1",
                     Database = "test",
                     Username = "root"
-                    //,Password = "ERPSYNC"
+                });
+                pool.Create(new ConnectionInfo()
+                {
+                    Name = ConnectionType.MYSQL,
+                    ServerType = ConnectionType.MYSQL,
+                    Server = "127.0.0.1",
+                    Database = "test",
+                    Username = "root"
                 });
                 //ConnectionType.SQL
                 pool.Test(new ConnectionInfo()
@@ -48,17 +55,27 @@ namespace Test
                     Password = "sapass"
                 });
                 //ConnectionType.SQLCE
-                pool.Test(new ConnectionInfo()
-                {
-                    ServerType = ConnectionType.SQLCE,
-                    Database = "Database.sdf"
-                });
+                //pool.Test(new ConnectionInfo()
+                //{
+                //    ServerType = ConnectionType.SQLCE,
+                //    Database = "Database.sdf"
+                //});
                 //ConnectionType.SQLITE
                 pool.Test(new ConnectionInfo()
                 {
                     ServerType = ConnectionType.SQLITE,
                     Database = "test.sqlite3"
                 });
+
+                //Test SQL Created Connection --Execute
+                var mysqlCon=pool.Checkout(ConnectionType.MYSQL);
+                var table = mysqlCon.Execute("Select * from testtable");
+
+                Console.WriteLine("rows:" + table.Rows.Count);
+                mysqlCon.isTransaction = true;
+                table = mysqlCon.Execute("Select * from testtable");
+
+                Console.WriteLine("rows:" + table.Rows.Count);
             }
             catch (Exception ex)
             {

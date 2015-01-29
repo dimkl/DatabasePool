@@ -1,0 +1,9 @@
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\bin\Debug\Database.sdf
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\bin\Debug\Test.exe
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\bin\Debug\Test.pdb
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\bin\Debug\DatabasePool.dll
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\bin\Debug\System.Data.SQLite.dll
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\bin\Debug\DatabasePool.pdb
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\obj\Debug\Test.csprojResolveAssemblyReference.cache
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\obj\Debug\Test.exe
+C:\Users\Dimitris\Desktop\PoolStrategy\Test\obj\Debug\Test.pdb

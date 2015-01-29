@@ -93,20 +93,10 @@ namespace DatabasePool
             IDbCommand command = Connection.CreateCommand();
             command.CommandText = sql;
 
+
             if (parameters == null)
             {
                 parameters = new Dictionary<string, string>();
-            }
-
-            if (isProcedure)
-            {
-                command.CommandType = CommandType.StoredProcedure;
-            }
-
-            if (isTransaction)
-            {
-                transaction = Connection.BeginTransaction();
-                command.Transaction = transaction;
             }
             //add parameters
             foreach (var param in parameters)
@@ -119,9 +109,21 @@ namespace DatabasePool
             }
             //execute query and fill table
             var table = new DataTable();
-            try
+            using (Connection)
             {
-                //
+                Connection.Open();
+
+                if (isProcedure)
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                }
+
+                if (isTransaction)
+                {
+                    transaction = Connection.BeginTransaction();
+                    command.Transaction = transaction;
+                }
+
                 if (Connection is SqlConnection)
                 {
                     table = ExecuteAdapter<SqlDataAdapter>(command as SqlCommand);
@@ -130,10 +132,10 @@ namespace DatabasePool
                 {
                     table = ExecuteAdapter<MySqlDataAdapter>(command as MySqlCommand);
                 }
-                //else if (Connection is SQLCEconnection)
-                //{
-                //    return ExecuteAdapter< SQLCEDataAdapter>(command as  SQLCECommand);
-                //}
+                else if (Connection is SqlCeConnection)
+                {
+                    return ExecuteAdapter<SqlCeDataAdapter>(command as SqlCeCommand);
+                }
                 else if (Connection is OracleConnection)
                 {
                     table = ExecuteAdapter<OracleDataAdapter>(command as OracleCommand);
@@ -159,9 +161,6 @@ namespace DatabasePool
                     }
                 }
             }
-            catch (Exception ex)
-            {
-            }
 
             return table;
         }
@@ -169,7 +168,8 @@ namespace DatabasePool
         private DataTable ExecuteAdapter<T>(IDbCommand command)
             where T : IDbDataAdapter, new()
         {
-            var table = new DataTable();
+            var ds = new DataSet();
+
             string sql = command.CommandText;
             //add command to adapter
             var _adapter = new T();
@@ -191,9 +191,14 @@ namespace DatabasePool
                 _adapter.SelectCommand = command;
             }
             //fill adapter table
-            _adapter.Fill(table.DataSet);
+            _adapter.Fill(ds);
 
-            return table;
+            if (ds.Tables.Count == 0)
+            {
+                return new DataTable();
+            }
+
+            return ds.Tables[0];
         }
     }
 
