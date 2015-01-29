@@ -1,5 +1,0 @@
-C:\Users\Dimitris\Desktop\PoolStrategy\PoolStrategy\bin\Debug\DatabasePool.dll
-C:\Users\Dimitris\Desktop\PoolStrategy\PoolStrategy\bin\Debug\DatabasePool.pdb
-C:\Users\Dimitris\Desktop\PoolStrategy\PoolStrategy\bin\Debug\System.Data.SQLite.dll
-C:\Users\Dimitris\Desktop\PoolStrategy\PoolStrategy\obj\Debug\DatabasePool.dll
-C:\Users\Dimitris\Desktop\PoolStrategy\PoolStrategy\obj\Debug\DatabasePool.pdb
