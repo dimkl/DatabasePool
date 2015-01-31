@@ -2,14 +2,15 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
 using System.Data.Odbc;
 using System.Data.OracleClient;
 using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Data.SqlServerCe;
-using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Linq;
+using System.Reflection;
 
 namespace DatabasePool
 {
@@ -30,51 +31,66 @@ namespace DatabasePool
         }
     }
 
+    internal struct BatchDelimiter
+    {
+        public const string SQL = "GO";
+    }
+
+    internal struct PoolExceptionCode
+    {
+        public const int ROLLBACK = 0;
+        public const int SQLEXECUTION = 1;
+
+    }
+
     public class ConnectionInfo
     {
-        public string Name;
-        public string ServerType;
-
         public string Server;
         public string Database;
         public string Username;
         public string Password;
         public string IntergratedSecurity;
+    }
 
-        public string ServerMapping;
-        public string DatabaseMapping;
-        public string UsernameMapping;
-        public string PasswordMapping;
-        public string IntergratedSecurityMapping;
-
+    public class ConnectionInfoMapping : ConnectionInfo
+    {
+        public string Server;
+        public string Database;
+        public string Username;
+        public string Password;
+        public string IntergratedSecurity;
         public string Custom;
-        //public string ...
+    }
+
+    public class ConnectionInfoData : ConnectionInfo
+    {
+        public string Name;
+        public string ServerType;
+
+        public ConnectionInfoMapping Mapping = new ConnectionInfoMapping();
+
         public override string ToString()
         {
             StringBuilder builder = new StringBuilder();
-            if (ServerType != null && ServerMapping != null)
+            this.GetType().GetFields().ToList<FieldInfo>().ForEach(delegate(FieldInfo field) 
             {
-                builder.AppendFormat("{0}={1};", ServerMapping, Server);
-            }
-            if (Database != null && DatabaseMapping != null)
+                // check if Mapping for this Property exists
+                var mappingField = Mapping.GetType().GetField(field.Name);
+                if (mappingField == null)
+                {
+                    return;
+                }
+                // add Mapping value and value of Property if they are not null
+                var value = field.GetValue(this);
+                var mappingValue = mappingField.GetValue(Mapping);
+                if (value != null && mappingValue != null)
+                {
+                    builder.AppendFormat("{0}={1};", mappingValue, value);
+                }
+            });
+            if (Mapping.Custom != null)
             {
-                builder.AppendFormat("{0}={1};", DatabaseMapping, Database);
-            }
-            if (Username != null && UsernameMapping != null)
-            {
-                builder.AppendFormat("{0}={1};", UsernameMapping, Username);
-            }
-            if (Password != null && PasswordMapping != null)
-            {
-                builder.AppendFormat("{0}={1};", PasswordMapping, Password);
-            }
-            if (IntergratedSecurity != null && IntergratedSecurityMapping != null)
-            {
-                builder.AppendFormat("{0}={1};", IntergratedSecurityMapping, IntergratedSecurity);
-            }
-            if (Custom != null)
-            {
-                builder.AppendFormat(Custom);
+                builder.AppendFormat(Mapping.Custom);
             }
 
             return builder.ToString();
@@ -84,16 +100,20 @@ namespace DatabasePool
     public class DbConnection
     {
         public IDbConnection Connection;
-        public bool isProcedure;
-        public bool isTransaction;
+        public bool IsProcedure = false;
+        public bool IsTransaction = false;
+        public bool IsBatch = false;
+
+        private Dictionary<int, string> Errors = new Dictionary<int, string>();
 
         public DataTable Execute(string sql, Dictionary<string, string> parameters = null)
         {
-            IDbTransaction transaction = null;
+            //reset Errors
+            Errors = new Dictionary<int, string>();
+            // 
             IDbCommand command = Connection.CreateCommand();
             command.CommandText = sql;
-
-
+            //
             if (parameters == null)
             {
                 parameters = new Dictionary<string, string>();
@@ -109,20 +129,10 @@ namespace DatabasePool
             }
             //execute query and fill table
             var table = new DataTable();
-            using (Connection)
+            try
             {
                 Connection.Open();
-
-                if (isProcedure)
-                {
-                    command.CommandType = CommandType.StoredProcedure;
-                }
-
-                if (isTransaction)
-                {
-                    transaction = Connection.BeginTransaction();
-                    command.Transaction = transaction;
-                }
+                command = AddCommandOptions(command);
 
                 if (Connection is SqlConnection)
                 {
@@ -149,17 +159,27 @@ namespace DatabasePool
                     table = ExecuteAdapter<OdbcDataAdapter>(command as OdbcCommand);
                 }
 
-                if (isTransaction)
+                if (IsTransaction)
                 {
-                    transaction.Commit();
-                    try
-                    {
-                        transaction.Rollback();
-                    }
-                    catch (Exception ex2)
-                    {
-                    }
+                    command.Transaction.Commit();
                 }
+            }
+            catch (Exception ex)
+            {
+                Errors.Add(PoolExceptionCode.SQLEXECUTION, ex.Message);
+                try
+                {
+                    command.Transaction.Rollback();
+                }
+                catch (Exception rollbackEx)
+                {
+                    Errors.Add(PoolExceptionCode.ROLLBACK, rollbackEx.Message);
+                }
+            }
+            finally
+            {
+                if (Connection != null)
+                    Connection.Close();
             }
 
             return table;
@@ -168,6 +188,11 @@ namespace DatabasePool
         private DataTable ExecuteAdapter<T>(IDbCommand command)
             where T : IDbDataAdapter, new()
         {
+            if (IsBatch)
+            {
+                ExecuteBatch(command);
+                return new DataTable();
+            }
             var ds = new DataSet();
 
             string sql = command.CommandText;
@@ -200,6 +225,45 @@ namespace DatabasePool
 
             return ds.Tables[0];
         }
+
+        private void ExecuteBatch(IDbCommand command)
+        {
+            //split command.CommandText to batches
+            string[] batches = command.CommandText
+                .Trim()
+                .Split(new string[] { BatchDelimiter.SQL }, StringSplitOptions.RemoveEmptyEntries);
+            //execute batch
+            foreach (var batch in batches)
+            {
+                command.CommandText = batch;
+                command.ExecuteNonQuery();
+            }
+        }
+
+        private IDbCommand AddCommandOptions(IDbCommand command)
+        {
+            //force transaction if sql containes batches
+            if (IsBatch)
+            {
+                IsTransaction = true;
+            }
+            if (IsProcedure)
+            {
+                command.CommandType = CommandType.StoredProcedure;
+            }
+
+            if (IsTransaction)
+            {
+                command.Transaction = Connection.BeginTransaction();
+            }
+
+            return command;
+        }
+
+        public Dictionary<int, string> GetErrors()
+        {
+            return Errors;
+        }
     }
 
     public class ConnectionPool : Pool<DbConnection>
@@ -217,7 +281,7 @@ namespace DatabasePool
             return instance;
         }
 
-        public static List<string> GetAllDatabases(ConnectionInfo con)
+        public static List<string> GetAllDatabases(ConnectionInfoData con)
         {
             var databases = new List<string>();
 
@@ -244,7 +308,7 @@ namespace DatabasePool
             return databases;
         }
 
-        public static List<string> GetAllServers(ConnectionInfo con)
+        public static List<string> GetAllServers(ConnectionInfoData con)
         {
             var servers = new List<string>();
 
@@ -271,59 +335,59 @@ namespace DatabasePool
             return servers;
         }
 
-        public void Create(ConnectionInfo con, string name = "")
+        public void Create(ConnectionInfoData con, string name = "")
         {
             DbConnection _con = new DbConnection();
+
             if (con.ServerType == ConnectionType.MYSQL)
             {
-                con.ServerMapping = "Server";
-                con.DatabaseMapping = "Database";
-                con.UsernameMapping = "Uid";
-                con.PasswordMapping = "Pwd";
-                //
+                con.Mapping.Server = "Server";
+                con.Mapping.Database = "Database";
+                con.Mapping.Username = "Uid";
+                con.Mapping.Password = "Pwd";
                 _con.Connection = new MySqlConnection(con.ToString());
             }
             else if (con.ServerType == ConnectionType.SQL)
             {
-                con.ServerMapping = "Server";
-                con.DatabaseMapping = "Database";
-                con.UsernameMapping = "User Id";
-                con.PasswordMapping = "Password";
-                //
+                con.Mapping.Server = "Server";
+                con.Mapping.Database = "Database";
+                con.Mapping.Username = "User Id";
+                con.Mapping.Password = "Password";
+
                 _con.Connection = new SqlConnection(con.ToString());
             }
             else if (con.ServerType == ConnectionType.SQLCE)
             {
-                con.DatabaseMapping = "Data Source";
-                con.PasswordMapping = "Password";
-                con.Custom = "Encrypt Database = True;";
+                con.Mapping.Database = "Data Source";
+                con.Mapping.Password = "Password";
+                con.Mapping.Custom = "Encrypt Database = True;";
 
                 _con.Connection = new SqlCeConnection(con.ToString());
             }
             else if (con.ServerType == ConnectionType.ORACLE)
             {
-                con.ServerMapping = "Server";
-                con.DatabaseMapping = "Data Source";
-                con.UsernameMapping = "User Id";
-                con.PasswordMapping = "Password";
-                con.IntergratedSecurityMapping = "Integrated Security";
+                con.Mapping.Server = "Server";
+                con.Mapping.Database = "Data Source";
+                con.Mapping.Username = "User Id";
+                con.Mapping.Password = "Password";
+                con.Mapping.IntergratedSecurity = "Integrated Security";
                 //
                 _con.Connection = new OracleConnection(con.ToString());
             }
             else if (con.ServerType == ConnectionType.SQLITE)
             {
-                con.DatabaseMapping = "Data Source";
-                con.PasswordMapping = "Password";
-                con.Custom = "Version=3;";
+                con.Mapping.Database = "Data Source";
+                con.Mapping.Password = "Password";
+                con.Mapping.Custom = "Version=3;";
 
                 _con.Connection = new SQLiteConnection(con.ToString());
             }
             else if (con.ServerType == ConnectionType.ODBC)
             {
-                con.ServerMapping = "Dsn";
-                con.UsernameMapping = "Uid";
-                con.PasswordMapping = "Pwd";
-                //
+                con.Mapping.Server = "Dsn";
+                con.Mapping.Username = "Uid";
+                con.Mapping.Password = "Pwd";
+
                 _con.Connection = new OdbcConnection(con.ToString());
             }
 
@@ -331,7 +395,7 @@ namespace DatabasePool
             base.Create(name, _con);
         }
 
-        public void Test(ConnectionInfo con)
+        public void Test(ConnectionInfoData con)
         {
             //create connection
             Create(con, "Test");
