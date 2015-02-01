@@ -1,5 +1,5 @@
 # Pool Pattern [![Build Status](https://travis-ci.org/dimkl/PoolPattern.svg)](https://travis-ci.org/dimkl/PoolPattern)
-=========
+
 Pool Strategy is a c# implementation of Pool Strategy for c# language with a usage example for Database Connection Pooling. 
 This repository contains a solution with 2 projects (PoolStrategy,Test), a README and a gitignore file. 
 
