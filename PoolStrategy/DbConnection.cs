@@ -7,12 +7,14 @@ using System.Data.OracleClient;
 using System.Data.SqlClient;
 using System.Data.SQLite;
 using System.Data.SqlServerCe;
+using System.Text.RegularExpressions;
+using System.Linq;
 
 namespace DatabasePool
 {
-    internal struct BatchDelimiter
+    internal struct BatchDelimiterPattern
     {
-        public const string SQL = "GO";
+        public const string SQL = @"\n\s*GO\s*";
     }
 
     internal struct PoolExceptionCode
@@ -20,7 +22,7 @@ namespace DatabasePool
         public const int ROLLBACK = 0;
         public const int SQLEXECUTION = 1;
     }
-    
+
     public class DbConnection
     {
         public IDbConnection Connection;
@@ -153,11 +155,10 @@ namespace DatabasePool
         private void ExecuteBatch(IDbCommand command)
         {
             //split command.CommandText to batches
-            string[] batches = command.CommandText
-                .Trim()
-                .Split(new string[] { BatchDelimiter.SQL }, StringSplitOptions.RemoveEmptyEntries);
+            var batches = Regex.Split(command.CommandText.Trim(), BatchDelimiterPattern.SQL, RegexOptions.IgnoreCase)
+                .Where(s => s != String.Empty && s.Length != 0);
             //execute batch
-            foreach (var batch in batches)
+            foreach (string batch in batches)
             {
                 command.CommandText = batch;
                 command.ExecuteNonQuery();
