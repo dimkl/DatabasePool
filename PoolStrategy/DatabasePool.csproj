@@ -53,7 +53,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ConnectioBase.cs" />
+    <Compile Include="ConnectionData.cs" />
+    <Compile Include="ConnectionMapping.cs" />
     <Compile Include="ConnectionPool.cs" />
+    <Compile Include="ConnectionType.cs" />
+    <Compile Include="DbConnection.cs" />
     <Compile Include="Pool.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

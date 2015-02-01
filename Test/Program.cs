@@ -15,8 +15,10 @@ namespace Test
             var pool = ConnectionPool.getInstance();
             try
             {
+                var list=ConnectionType.GetAll();
+                Console.WriteLine("types:" + list.Count);
                 //ConnectionType.MYSQL
-                var info = new ConnectionInfoData()
+                var info = new ConnectionData()
                 {
                     ServerType = ConnectionType.MYSQL,
                     Server = "127.0.0.1",
@@ -27,7 +29,7 @@ namespace Test
                 info.Name = ConnectionType.MYSQL;
                 pool.Create(info);
                 //ConnectionType.SQL
-                info = new ConnectionInfoData()
+                info = new ConnectionData()
                 {
                     ServerType = ConnectionType.SQL,
                     Server = "DIMKL-ACER\\SQLEXPRESS",
@@ -47,7 +49,7 @@ namespace Test
                 //    Password = "ERPSYNC"
                 //});
                 //ConnectionType.ODBC
-                info = new ConnectionInfoData()
+                info = new ConnectionData()
                 {
                     ServerType = ConnectionType.ODBC,
                     Server = "odbc_test",
@@ -62,7 +64,7 @@ namespace Test
                 //    Database = "Database.sdf"
                 //});
                 //ConnectionType.SQLITE
-                info = new ConnectionInfoData()
+                info = new ConnectionData()
                 {
                     ServerType = ConnectionType.SQLITE,
                     Database = "test.sqlite3"
