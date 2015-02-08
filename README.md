@@ -1,4 +1,7 @@
-# Database Pool [![Build Status](https://travis-ci.org/dimkl/DatabasePool.svg?branch=master)](https://travis-ci.org/dimkl/DatabasePool)
+# Database Pool 
+[![Build Status](https://travis-ci.org/dimkl/DatabasePool.svg?branch=master)](https://travis-ci.org/dimkl/DatabasePool)
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/dimkl/databasepool/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
 
 Pool Strategy is a c# implementation of Pool Strategy for c# language with a usage example for Database Connection Pooling. 
 This repository contains a solution with 2 projects (Database Pool,Test), a README and a gitignore file. 
@@ -8,7 +11,4 @@ This project contains Pool Strategy implementation class as Pool.cs and the usag
 
 ## Test
 This project contains Pool Strategy implementation class as Pool.cs and the usage example to support Database connection to some of the known databases with connection polling as ConnectionPool.cs.
-
-
-[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/dimkl/databasepool/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
 
