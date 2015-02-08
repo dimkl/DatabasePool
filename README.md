@@ -8,3 +8,7 @@ This project contains Pool Strategy implementation class as Pool.cs and the usag
 
 ## Test
 This project contains Pool Strategy implementation class as Pool.cs and the usage example to support Database connection to some of the known databases with connection polling as ConnectionPool.cs.
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/dimkl/databasepool/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
